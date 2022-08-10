@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="//code.jquery.com/jquery-3.3.1.min.js"></script>
+    <title>Jet Game</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background-image: url('images/bgImage.jpg');
+            background-size: cover;
+        }
+        canvas {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1;
+            border: 5px solid white;
+        }
+
+        section {
+            position: absolute;
+            border: 1px solid black;
+            z-index: 3;
+            display: flex;
+            
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            display: none;
+
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .game-over {
+            font-size: 100px;
+            color: red;
+        }
+
+        .restart-btn {
+            width: 300px;
+            padding: 20px;
+            font-size: 50px;
+            cursor: pointer;
+            border-radius: 20px;
+            background-color: white;
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <audio controls autoplay loop onloadstart="this.volume=0.5">
+        <source src="sounds/bgm.mp3">
+    </audio>
+    <canvas id="myCanvas" width="1200" height="600"></canvas>
+
+    <section class="game-over" id="game-over">
+        <div>GAME OVER</div>
+        <button class="restart-btn">[RESTART]</button>
+    </section>
+    <script>
+        // 점수, 생명 변수 선언
+        let score = 0;
+        let life = 5;
+
+        // 미사일, 폭발 사운드
+        let missileSound = new Audio("sounds/Pop.wav");
+        let explodeSound = new Audio("sounds/Clan.mp3");
+
+        // 미사일 사운드 플레이 함수
+        function soundPlay() {
+            missileSound.volume = 0.12;
+            missileSound.load();
+            missileSound.currentTime = 0;
+            missileSound.play();
+        }
+
+        // 폭발 사운드 플레이 함수
+        function soundPlay1 () {
+            explodeSound.volume = 0.5;
+            explodeSound.load();
+            explodeSound.currentTime = 0;
+            explodeSound.play();
+        }
+
+        // 캔버스 만들기
+        let canvas = $("#myCanvas").get(0);
+        let ctx = canvas.getContext("2d");
+
+        // 스프라이트 이미지 만들기
+        let bgImage = new Image();
+        bgImage.src = "images/space.jpg";
+        let jetImage = new Image();
+        jetImage.src = "images/jet.png";
+        let enemyImage = new Image();
+        enemyImage.src = "images/meteorite.png";
+
+        // 키보드 배열
+        let keysDown = {};
+
+        // 배경화면 함수 만들기
+        function Background() {
+            this.x = 0, this.y = 0, this.w = 2400, this.h = 600;
+            this.render = function () {
+                ctx.drawImage(bgImage, this.x--, 0, this.w, this.h);
+                if (this.x <= -1200) {
+                    this.x = 0;
+                }
+
+                // 점수 표시하기
+                ctx.fillStyle = "#6495ED";
+                ctx.font = "italic bold 40px Arial";
+                ctx.fillText("SCORE : " + score.toString(), 10, 50);
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = "#ffffff";
+                ctx.strokeText("SCORE : " + score.toString(), 10, 50);
+
+                // 생명 표시하기
+                ctx.fillStyle = "red";
+                ctx.font = "italic bold 40px Arial";
+                ctx.fillText("LIFE : " + life.toString(), 1000, 50);
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = "#ffffff";
+                ctx.strokeText("LIFE : " + life.toString(), 1000, 50);
+            }
+        }
+
+        // 제트기 함수 만들기
+        function Jet() {
+            this.x = 30, this.y = 150, this.w = 80, this.h = 50;
+
+            this.render = function () {
+                ctx.drawImage(jetImage, this.x, this.y, this.w, this.h);
+                
+                // 운석과 충돌 시 실행
+                detectCollision();
+
+                // 미사일 이동
+                for (let i=0; i < missiles.length; i++) {
+                    let m = missiles[i];
+                    ctx.fillStyle = m.bg;
+                    ctx.fillRect((m.x += 4), m.y, m.w, m.h);
+                    
+                    // 미사일과 적기의 충돌 시 실행
+                    checkCollision(m, i);
+
+                    if (m.x >= 1200) {
+                        missiles.splice(i, 1);
+                    }
+                }
+            } 
+        }
+
+        // 미사일과 적기의 충돌을 체크한다.
+        function checkCollision(m, mi) {
+            let e_1 = enemie_1;
+            let e_2 = enemie_2;
+            let e_3 = enemie_3;
+
+            if (m.x >= e_1.x && m.x <= e_1.x+50 && m.y >= e_1.y && m.y <= e_1.y+50) {
+                enemie_1.x = 1150;
+                let randomY = Math.floor(Math.random()*(550-10+1))+10;
+                enemie_1.y = randomY;
+                soundPlay1();
+                missiles.splice(missiles[mi], 2);
+                score += 1;
+            }
+            if (m.x >= e_2.x && m.x <= e_2.x+50 && m.y >= e_2.y && m.y <= e_2.y+50) {
+                enemie_2.x = 1150;
+                let randomY = Math.floor(Math.random()*(550-10+1))+10;
+                enemie_2.y = randomY;
+                soundPlay1();
+                missiles.splice(missiles[mi], 2);
+                score += 1;
+            }
+            if (m.x >= e_3.x && m.x <= e_3.x+50 && m.y >= e_3.y && m.y <= e_3.y+50) {
+                enemie_3.x = 1150;
+                let randomY = Math.floor(Math.random()*(550-10+1))+10;
+                enemie_3.y = randomY;
+                soundPlay1();
+                missiles.splice(missiles[mi], 2);
+                score += 1;
+            }
+        }
+
+        // 제트기와 운석 충돌 처리 함수
+        function detectCollision () {
+            let e_1 = enemie_1;
+            let e_2 = enemie_2;
+            let e_3 = enemie_3;
+
+            if (jet.x >= e_1.x-50 && jet.x <= e_1.x+50 && jet.y >= e_1.y-50 && jet.y <= e_1.y+50) {
+                enemie_1.x = 1150;
+                let randomY = Math.floor(Math.random()*(550-10+1))+10;
+                enemie_1.y = randomY;
+                soundPlay1();
+                life -= 1;
+            }
+            if (jet.x >= e_2.x-50 && jet.x <= e_2.x+50 && jet.y >= e_2.y-50 && jet.y <= e_2.y+50) {
+                enemie_2.x = 1150;
+                let randomY = Math.floor(Math.random()*(550-10+1))+10;
+                enemie_2.y = randomY;
+                soundPlay1();
+                life -= 1;
+            }
+            if (jet.x >= e_3.x-50 && jet.x <= e_3.x+50 && jet.y >= e_3.y-50 && jet.y <= e_3.y+50) {
+                enemie_3.x = 1150;
+                let randomY = Math.floor(Math.random()*(550-10+1))+10;
+                enemie_3.y = randomY;
+                soundPlay1();
+                life -= 1;
+            }
+        }
+
+        // 운석 만들기 3개
+        let enemie_1 = {
+            id : "enemy1",
+            x : 1150,
+            y : Math.floor(Math.random()*(550 - 10 + 1)) + 10
+        };
+        let enemie_2 = {
+            id : "enemy2",
+            x : 1150,
+            y : Math.floor(Math.random()*(550 - 10 + 1)) + 10
+        };
+        let enemie_3 = {
+            id : "enemy3",
+            x : 1150,
+            y : Math.floor(Math.random()*(550 - 10 + 1)) + 10
+        };
+
+        let enemySpeed = 6;
+
+        function Enemy_1() {
+            this.w = 50, this.h = 50;
+
+            this.render = function () {
+                let enemyX = (enemie_1.x -= enemySpeed);
+                ctx.drawImage(enemyImage, enemyX, enemie_1.y, this.w, this.h);
+
+                if (enemie_1.x < 0) {
+                    let randomY = Math.floor(Math.random() * (550 -10 + 1)) + 10;
+                    enemie_1.y = randomY;
+                    enemie_1.x = 1150;
+                }
+            }
+        }
+
+        function Enemy_2() {
+            this.w = 50, this.h = 50;
+
+            this.render = function () {
+                let enemyX = (enemie_2.x -= enemySpeed);
+                ctx.drawImage(enemyImage, enemyX, enemie_2.y, this.w, this.h);
+
+                if (enemie_2.x < 0) {
+                    let randomY = Math.floor(Math.random() * (550 -10 + 1)) + 10;
+                    enemie_2.y = randomY;
+                    enemie_2.x = 1150;
+                }
+            }
+        }
+
+        function Enemy_3() {
+            this.w = 50, this.h = 50;
+
+            this.render = function () {
+                let enemyX = (enemie_3.x -= enemySpeed);
+                ctx.drawImage(enemyImage, enemyX, enemie_3.y, this.w, this.h);
+
+                if (enemie_3.x < 0) {
+                    let randomY = Math.floor(Math.random() * (550 -10 + 1)) + 10;
+                    enemie_3.y = randomY;
+                    enemie_3.x = 1150;
+                }
+            }
+        }
+
+        let enemy_1 = new Enemy_1();
+        let enemy_2 = new Enemy_2();
+        let enemy_3 = new Enemy_3();
+
+        // 미사일 객체 만들기
+        missiles = [];
+
+        // 객체 생성하기
+        let background = new Background();
+        let jet = new Jet();
+
+        // 메인 작동 함수
+        function animate() {
+            background.render();
+            jet.render();
+            enemy_1.render();
+            enemy_2.render();
+            enemy_3.render();
+            jetMove();
+
+            if (life < 0) {
+                $("#game-over").css("display", "flex");
+                clearInterval(animateInterval);
+            }
+        }
+
+        // 키보드 입력 시 keysDown에 입력
+        $(document).keydown((event) => {
+            keysDown[event.keyCode] = true;
+        })
+
+        $(document).keyup((event) => {
+            delete keysDown[event.keyCode];
+
+            // space bar
+            if (event.keyCode === 32) {
+                missiles.push({
+                    x: jet.x + jet.w * 0.5,
+                    y: jet.y + jet.h * 0.5,
+                    w: 10,
+                    h: 3,
+                    bg: "red"
+                })
+                soundPlay();
+            }
+        })
+
+        // 제트기 움지이기
+        function jetMove() {
+            // 방향키로 움직인다.
+            let speed = 3;
+
+            if (37 in keysDown) {
+                if (jet.x <= 0) {
+                    jet.x = 0;
+                }
+                else {
+                    jet.x -= speed;
+                }
+            }
+            if (39 in keysDown) {
+                if (jet.x >= 1200 - jet.w) {
+                    jet.x = 1200 - jet.w;
+                }
+                else {
+                    jet.x += speed;
+                }
+            }
+            if (38 in keysDown) {
+                if (jet.y <= 0) {
+                    jet.y = 0;
+                }
+                else {
+                    jet.y -= speed;
+                }
+            }
+            if (40 in keysDown) {
+                if (jet.y >= 600 - jet.h) {
+                    jet.y = 600 - jet.h;
+                }
+                else {
+                    jet.y += speed;
+                }
+            }
+        }
+
+        // 0.01초 마다 메인 작동 함수 실행
+        let animateInterval = setInterval(animate, 10);
+        
+        // 게임오버 버튼을 클릭했을 때 게임을 재시작 한다.
+        $("#game-over").on("click", () => {
+            // 점수, 생명을 다시 초기화
+            score = 0;
+            life = 5;
+            // 제트기 위치를 재자리로 변경
+            jet.x = 30, jet.y = 150;
+            // 게임오버 버튼을 다시 숨깁니다.
+            $("#game-over").css("display", "none");
+            // 게임을 다시 재시작합니다.
+            animateInterval = setInterval(animate, 10);
+        })
+    </script>
+</body>
+</html>
